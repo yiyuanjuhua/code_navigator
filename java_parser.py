@@ -153,9 +153,27 @@ class JavaParser:
         
         self.classes[class_name] = class_info
         
-        # Add functions to global function map
+        # Add functions to global function map with deduplication
         for func in functions:
             func_key = f"{class_name}.{func.name}"
+            # Check for duplicates (same name, file_path, start_line, end_line)
+            if func_key in self.functions:
+                existing_func = self.functions[func_key]
+                if (existing_func.file_path == func.file_path and 
+                    existing_func.start_line == func.start_line and 
+                    existing_func.end_line == func.end_line):
+                    logger.warning(f"Skipping duplicate function: {func_key} in {func.file_path}:{func.start_line}-{func.end_line}")
+                    continue
+                else:
+                    # Different implementation, use a unique key
+                    counter = 1
+                    unique_key = f"{func_key}_{counter}"
+                    while unique_key in self.functions:
+                        counter += 1
+                        unique_key = f"{func_key}_{counter}"
+                    func_key = unique_key
+                    logger.info(f"Found function with same name but different location, using unique key: {func_key}")
+            
             self.functions[func_key] = func
     
     def _process_method_declaration(self, method_node, class_name: str, file_path: str, content: str, class_rest_mapping: str = "") -> Optional[FunctionInfo]:

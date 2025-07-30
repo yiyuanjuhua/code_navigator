@@ -59,9 +59,9 @@ python3 java_navigator.py createUser ./test/java-project --verbose
 1. **Mermaid格式的函数调用关系图**
    ```mermaid
    graph TD
-       node0["GET /{id}\nUserController.getUserById\nL15-18"]
-       node1["UserService.findUserById\nL16-19"]
-       node2["ValidationUtil.validateId\nL8-12"]
+       node0["GET /{id}\nUserController.getUserById\n15-18"]
+       node1["UserService.findUserById\n16-19"]
+       node2["ValidationUtil.validateId\n8-12"]
        node0 --> node1
        node1 --> node2
    ```
@@ -71,12 +71,67 @@ python3 java_navigator.py createUser ./test/java-project --verbose
    - 起始函数信息
    - REST接口信息（如适用）
 
-3. **详细函数信息**
+3. **详细函数信息（JSON格式）**
    - 函数名称和所属类
    - 文件路径和起止行数
    - 是否为公共方法
    - 调用的其他函数列表
    - REST接口信息（如适用）
+
+### Function Info JSON 格式说明
+
+工具输出的`function_info_json`包含完整的函数调用链信息，格式如下：
+
+```json
+{
+  "start_point": "getUserById",
+  "target_function": "UserController.getUserById", 
+  "total_functions": 2,
+  "max_depth": 10,
+  "functions": [
+    {
+      "name": "getUserById",
+      "class_name": "UserController",
+      "file_path": "./test/java-project/src/main/java/com/example/controller/UserController.java",
+      "start_line": 15,
+      "end_line": 18,
+      "is_public": true,
+      "is_rest_endpoint": true,
+      "endpoint_path": "/{id}",
+      "http_method": "GET",
+      "called_functions": ["UserService.findUserById"]
+    },
+    {
+      "name": "findUserById", 
+      "class_name": "UserService",
+      "file_path": "./test/java-project/src/main/java/com/example/service/UserService.java",
+      "start_line": 16,
+      "end_line": 19,
+      "is_public": true,
+      "is_rest_endpoint": false,
+      "endpoint_path": "",
+      "http_method": "",
+      "called_functions": ["ValidationUtil.validateId"]
+    }
+  ]
+}
+```
+
+**字段说明：**
+- `start_point`: 用户输入的起始查找点
+- `target_function`: 实际匹配到的目标函数
+- `total_functions`: 调用链中的函数总数
+- `max_depth`: 使用的最大搜索深度
+- `functions`: 调用链中所有函数的详细信息数组
+  - `name`: 函数名
+  - `class_name`: 所属类名
+  - `file_path`: 文件路径
+  - `start_line`/`end_line`: 函数在文件中的起止行数
+  - `is_public`: 是否为公开方法
+  - `is_rest_endpoint`: 是否为REST接口
+  - `endpoint_path`: REST接口路径（如适用）
+  - `http_method`: HTTP方法（如适用）
+  - `called_functions`: 该函数调用的其他函数列表
 
 ## 项目结构
 
@@ -85,6 +140,10 @@ python3 java_navigator.py createUser ./test/java-project --verbose
 ├── java_navigator.py      # 主入口程序
 ├── java_parser.py         # Java代码解析器
 ├── call_graph_analyzer.py # 调用关系分析器
+├── demo_usage.py          # 使用演示脚本
+├── setup_venv.py          # 虚拟环境设置脚本
+├── requirements.txt       # Python依赖包列表
+├── venv/                  # Python虚拟环境目录（自动生成）
 ├── test/                  # 测试项目
 │   └── java-project/      # Spring Boot测试项目
 │       ├── pom.xml
@@ -116,6 +175,44 @@ python3 java_navigator.py createUser ./test/java-project --verbose
 - Python 3.6+
 - Java工程必须包含src目录
 - 支持Java 21语法特性
+
+## 环境设置
+
+### 自动设置（推荐）
+
+运行项目自带的环境设置脚本：
+
+```bash
+python setup_venv.py
+```
+
+该脚本会自动：
+1. 创建Python虚拟环境（venv目录）
+2. 安装所有必需的依赖包
+3. 显示虚拟环境激活说明
+
+### 手动设置
+
+如果需要手动设置环境：
+
+```bash
+# 创建虚拟环境
+python -m venv venv
+
+# 激活虚拟环境
+# Linux/Mac:
+source venv/bin/activate
+# Windows:
+venv\Scripts\activate
+
+# 安装依赖
+pip install -r requirements.txt
+```
+
+### 依赖包
+
+项目需要以下Python包：
+- `javalang==0.13.0` - Java源码解析库
 
 ## 限制说明
 

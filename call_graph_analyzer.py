@@ -181,7 +181,11 @@ class MermaidGenerator:
         line_info = f"L{func_info.start_line}-{func_info.end_line}"
         label_parts.append(line_info)
         
-        return "\\n".join(label_parts)
+        # Join label parts and clean up special characters for Mermaid
+        label = "\\n".join(label_parts)
+        # Remove any problematic character sequences that might appear in Mermaid output
+        label = label.replace("\\nL", "\\n")
+        return label
 
 class ResultFormatter:
     """Format analysis results for output"""
