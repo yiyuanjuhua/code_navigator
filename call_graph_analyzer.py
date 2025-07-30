@@ -75,12 +75,23 @@ class CallGraphAnalyzer:
     
     def get_all_functions_in_chain(self, call_chain: CallChain) -> List[FunctionInfo]:
         """Get all functions in the call chain as a flat list"""
-        functions = [call_chain.function]
+        # 使用字典来去重，以函数的唯一标识作为key
+        unique_functions = {}
+        self._collect_unique_functions(call_chain, unique_functions)
+        return list(unique_functions.values())
+    
+    def _collect_unique_functions(self, call_chain: CallChain, unique_functions: Dict[str, FunctionInfo]) -> None:
+        """递归收集唯一的函数，避免重复"""
+        # 创建函数的唯一标识：类名.方法名@文件路径:起始行号
+        func_key = f"{call_chain.function.class_name}.{call_chain.function.name}@{call_chain.function.file_path}:{call_chain.function.start_line}"
         
+        # 如果还没有收集过这个函数，则添加
+        if func_key not in unique_functions:
+            unique_functions[func_key] = call_chain.function
+        
+        # 递归处理子调用链
         for child in call_chain.children:
-            functions.extend(self.get_all_functions_in_chain(child))
-        
-        return functions
+            self._collect_unique_functions(child, unique_functions)
 
 class MermaidGenerator:
     """Generate Mermaid diagrams for function call chains"""
