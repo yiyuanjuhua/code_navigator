@@ -1,0 +1,232 @@
+from typing import Dict, List, Set, Optional, Tuple
+from dataclasses import dataclass
+from java_parser import FunctionInfo, JavaParser
+import logging
+
+logger = logging.getLogger(__name__)
+
+@dataclass
+class CallChain:
+    """Function call chain information"""
+    function: FunctionInfo
+    children: List['CallChain']
+    depth: int = 0
+
+class CallGraphAnalyzer:
+    """Analyze function call relationships and generate call graphs"""
+    
+    def __init__(self, functions: Dict[str, FunctionInfo]):
+        self.functions = functions
+        self.call_graph: Dict[str, List[str]] = {}
+        self._build_call_graph()
+    
+    def _build_call_graph(self) -> None:
+        """Build the call graph from function information"""
+        for func_key, func_info in self.functions.items():
+            self.call_graph[func_key] = func_info.called_functions.copy()
+    
+    def find_function_by_name(self, function_name: str) -> List[str]:
+        """Find function keys that match the given function name"""
+        matching_functions = []
+        
+        # Exact match first
+        if function_name in self.functions:
+            matching_functions.append(function_name)
+        
+        # Check for class.method format
+        for func_key in self.functions.keys():
+            if func_key.endswith(f".{function_name}"):
+                matching_functions.append(func_key)
+        
+        # Check for REST endpoint path match
+        for func_key, func_info in self.functions.items():
+            if func_info.is_rest_endpoint and function_name in func_info.endpoint_path:
+                matching_functions.append(func_key)
+        
+        return matching_functions
+    
+    def get_call_chain(self, function_key: str, max_depth: int = 10) -> Optional[CallChain]:
+        """Get the complete call chain starting from the given function"""
+        if function_key not in self.functions:
+            return None
+        
+        visited = set()
+        return self._build_call_chain(function_key, visited, 0, max_depth)
+    
+    def _build_call_chain(self, function_key: str, visited: Set[str], depth: int, max_depth: int) -> CallChain:
+        """Recursively build call chain"""
+        func_info = self.functions[function_key]
+        chain = CallChain(function=func_info, children=[], depth=depth)
+        
+        if depth >= max_depth or function_key in visited:
+            return chain
+        
+        visited.add(function_key)
+        
+        # Get called functions
+        called_functions = self.call_graph.get(function_key, [])
+        
+        for called_func in called_functions:
+            if called_func in self.functions:
+                child_chain = self._build_call_chain(called_func, visited.copy(), depth + 1, max_depth)
+                chain.children.append(child_chain)
+        
+        return chain
+    
+    def get_all_functions_in_chain(self, call_chain: CallChain) -> List[FunctionInfo]:
+        """Get all functions in the call chain as a flat list"""
+        functions = [call_chain.function]
+        
+        for child in call_chain.children:
+            functions.extend(self.get_all_functions_in_chain(child))
+        
+        return functions
+
+class MermaidGenerator:
+    """Generate Mermaid diagrams for function call chains"""
+    
+    def __init__(self):
+        self.node_counter = 0
+        self.node_map: Dict[str, str] = {}
+    
+    def generate_mermaid_diagram(self, call_chain: CallChain) -> str:
+        """Generate Mermaid flowchart diagram from call chain"""
+        self.node_counter = 0
+        self.node_map = {}
+        
+        mermaid_lines = ["graph TD"]
+        
+        # First pass: collect all nodes
+        self._collect_all_nodes(call_chain)
+        
+        # Add node definitions
+        for func_key, node_def in self.node_map.items():
+            mermaid_lines.append(f"    {node_def}")
+        
+        # Second pass: generate edges
+        self._generate_mermaid_edges(call_chain, mermaid_lines)
+        
+        return "\n".join(mermaid_lines)
+    
+    def _collect_all_nodes(self, chain: CallChain) -> None:
+        """Collect all nodes in the call chain"""
+        self._get_or_create_node(chain.function)
+        
+        for child in chain.children:
+            self._collect_all_nodes(child)
+    
+    def _generate_mermaid_edges(self, chain: CallChain, mermaid_lines: List[str]) -> None:
+        """Generate edges for the Mermaid diagram"""
+        current_node_id = self._get_node_id(chain.function)
+        
+        for child in chain.children:
+            child_node_id = self._get_node_id(child.function)
+            mermaid_lines.append(f"    {current_node_id} --> {child_node_id}")
+            
+            # Recursively process children
+            self._generate_mermaid_edges(child, mermaid_lines)
+    
+    def _get_node_id(self, func_info: FunctionInfo) -> str:
+        """Get the node ID for a function"""
+        func_key = f"{func_info.class_name}.{func_info.name}"
+        if func_key in self.node_map:
+            return self.node_map[func_key].split('[')[0]
+        return "unknown"
+    
+    def _generate_mermaid_nodes(self, chain: CallChain, mermaid_lines: List[str]) -> str:
+        """Generate Mermaid nodes and edges recursively"""
+        # Create node for current function
+        current_node = self._get_or_create_node(chain.function)
+        
+        # Create nodes for children and connect them
+        for child in chain.children:
+            child_node = self._get_or_create_node(child.function)
+            
+            # Add edge from current to child
+            mermaid_lines.append(f"    {current_node} --> {child_node}")
+            
+            # Recursively process children
+            self._generate_mermaid_nodes(child, mermaid_lines)
+        
+        return current_node
+    
+    def _get_or_create_node(self, func_info: FunctionInfo) -> str:
+        """Get or create a Mermaid node for the function"""
+        func_key = f"{func_info.class_name}.{func_info.name}"
+        
+        if func_key not in self.node_map:
+            node_id = f"node{self.node_counter}"
+            self.node_counter += 1
+            
+            # Create node label
+            label = self._create_node_label(func_info)
+            self.node_map[func_key] = f'{node_id}["{label}"]'
+        
+        return self.node_map[func_key].split('[')[0]  # Return just the node ID
+    
+    def _create_node_label(self, func_info: FunctionInfo) -> str:
+        """Create a readable label for the function node"""
+        label_parts = []
+        
+        # Add REST endpoint info if applicable
+        if func_info.is_rest_endpoint:
+            endpoint_info = f"{func_info.http_method} {func_info.endpoint_path}"
+            label_parts.append(endpoint_info)
+        
+        # Add class and method name
+        class_method = f"{func_info.class_name}.{func_info.name}"
+        label_parts.append(class_method)
+        
+        # Add line numbers
+        line_info = f"L{func_info.start_line}-{func_info.end_line}"
+        label_parts.append(line_info)
+        
+        return "\\n".join(label_parts)
+
+class ResultFormatter:
+    """Format analysis results for output"""
+    
+    @staticmethod
+    def format_function_info(functions: List[FunctionInfo]) -> str:
+        """Format function information as readable text"""
+        output_lines = []
+        
+        output_lines.append("=== Function Information ===")
+        output_lines.append("")
+        
+        for i, func in enumerate(functions, 1):
+            output_lines.append(f"{i}. {func.class_name}.{func.name}")
+            
+            if func.is_rest_endpoint:
+                output_lines.append(f"   REST Endpoint: {func.http_method} {func.endpoint_path}")
+            
+            output_lines.append(f"   File: {func.file_path}")
+            output_lines.append(f"   Lines: {func.start_line}-{func.end_line}")
+            output_lines.append(f"   Public: {'Yes' if func.is_public else 'No'}")
+            
+            if func.called_functions:
+                output_lines.append(f"   Calls: {', '.join(func.called_functions)}")
+            else:
+                output_lines.append("   Calls: None")
+            
+            output_lines.append("")
+        
+        return "\n".join(output_lines)
+    
+    @staticmethod
+    def format_call_chain_summary(call_chain: CallChain) -> str:
+        """Format call chain summary"""
+        analyzer = CallGraphAnalyzer({})
+        all_functions = analyzer.get_all_functions_in_chain(call_chain)
+        
+        output_lines = []
+        output_lines.append("=== Call Chain Summary ===")
+        output_lines.append(f"Total functions in chain: {len(all_functions)}")
+        output_lines.append(f"Starting function: {call_chain.function.class_name}.{call_chain.function.name}")
+        
+        if call_chain.function.is_rest_endpoint:
+            output_lines.append(f"REST Endpoint: {call_chain.function.http_method} {call_chain.function.endpoint_path}")
+        
+        output_lines.append("")
+        
+        return "\n".join(output_lines)
