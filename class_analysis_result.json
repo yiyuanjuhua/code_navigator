@@ -1,0 +1,97 @@
+[
+  {
+    "name": "",
+    "class_name": "Application",
+    "file_path": "./test/java-project/src/main/java/com/example/Application.java",
+    "start_line": 7,
+    "end_line": 11,
+    "is_public": true,
+    "is_rest_endpoint": false,
+    "endpoint_path": "",
+    "http_method": "",
+    "called_functions": [
+      "SpringApplication.run"
+    ]
+  },
+  {
+    "name": "",
+    "class_name": "UserController",
+    "file_path": "./test/java-project/src/main/java/com/example/controller/UserController.java",
+    "start_line": 10,
+    "end_line": 29,
+    "is_public": true,
+    "is_rest_endpoint": true,
+    "endpoint_path": "",
+    "http_method": "REST",
+    "called_functions": [
+      "userService.deleteUserById",
+      "userService.createNewUser",
+      "userService.findUserById"
+    ]
+  },
+  {
+    "name": "",
+    "class_name": "UserRepository",
+    "file_path": "./test/java-project/src/main/java/com/example/repository/UserRepository.java",
+    "start_line": 9,
+    "end_line": 29,
+    "is_public": true,
+    "is_rest_endpoint": false,
+    "endpoint_path": "",
+    "http_method": "",
+    "called_functions": [
+      "userDatabase.put",
+      "userDatabase.containsKey",
+      "userDatabase.remove"
+    ]
+  },
+  {
+    "name": "",
+    "class_name": "UserService",
+    "file_path": "./test/java-project/src/main/java/com/example/service/UserService.java",
+    "start_line": 10,
+    "end_line": 44,
+    "is_public": true,
+    "is_rest_endpoint": false,
+    "endpoint_path": "",
+    "http_method": "",
+    "called_functions": [
+      "validationUtil.validateId",
+      "buildUserResponse",
+      "System.currentTimeMillis",
+      "userRepository.saveUser",
+      "validationUtil.validateUsername",
+      "generateUserId",
+      "userRepository.deleteUser"
+    ]
+  },
+  {
+    "name": "",
+    "class_name": "UserResponse",
+    "file_path": "./test/java-project/src/main/java/com/example/dto/UserResponse.java",
+    "start_line": 3,
+    "end_line": 47,
+    "is_public": true,
+    "is_rest_endpoint": false,
+    "endpoint_path": "",
+    "http_method": "",
+    "called_functions": []
+  },
+  {
+    "name": "",
+    "class_name": "ValidationUtil",
+    "file_path": "./test/java-project/src/main/java/com/example/util/ValidationUtil.java",
+    "start_line": 6,
+    "end_line": 26,
+    "is_public": true,
+    "is_rest_endpoint": false,
+    "endpoint_path": "",
+    "http_method": "",
+    "called_functions": [
+      "username.trim",
+      "input.matches",
+      "username.length",
+      "isEmpty"
+    ]
+  }
+]

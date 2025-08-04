@@ -1,0 +1,435 @@
+{
+  "Application": {
+    "name": "",
+    "class_name": "Application",
+    "file_path": "./test/java-project/src/main/java/com/example/Application.java",
+    "start_line": 7,
+    "end_line": 11,
+    "is_public": true,
+    "is_rest_endpoint": false,
+    "endpoint_path": "",
+    "http_method": "",
+    "called_functions": [
+      "SpringApplication.run"
+    ],
+    "package": "com.example",
+    "functions": [
+      {
+        "name": "main",
+        "class_name": "Application",
+        "file_path": "./test/java-project/src/main/java/com/example/Application.java",
+        "start_line": 8,
+        "end_line": 10,
+        "called_functions": [],
+        "is_public": true,
+        "is_rest_endpoint": false,
+        "endpoint_path": "",
+        "http_method": ""
+      }
+    ],
+    "imports": [
+      "org.springframework.boot.SpringApplication",
+      "org.springframework.boot.autoconfigure.SpringBootApplication"
+    ]
+  },
+  "UserController": {
+    "name": "",
+    "class_name": "UserController",
+    "file_path": "./test/java-project/src/main/java/com/example/controller/UserController.java",
+    "start_line": 10,
+    "end_line": 29,
+    "is_public": true,
+    "is_rest_endpoint": true,
+    "endpoint_path": "",
+    "http_method": "REST",
+    "called_functions": [
+      "userService.createNewUser",
+      "userService.deleteUserById",
+      "userService.findUserById"
+    ],
+    "package": "com.example.controller",
+    "functions": [
+      {
+        "name": "getUserById",
+        "class_name": "UserController",
+        "file_path": "./test/java-project/src/main/java/com/example/controller/UserController.java",
+        "start_line": 16,
+        "end_line": 18,
+        "called_functions": [
+          "UserService.findUserById"
+        ],
+        "is_public": true,
+        "is_rest_endpoint": true,
+        "endpoint_path": "/api/users/{id}",
+        "http_method": "GET"
+      },
+      {
+        "name": "createUser",
+        "class_name": "UserController",
+        "file_path": "./test/java-project/src/main/java/com/example/controller/UserController.java",
+        "start_line": 21,
+        "end_line": 23,
+        "called_functions": [
+          "UserService.createNewUser"
+        ],
+        "is_public": true,
+        "is_rest_endpoint": true,
+        "endpoint_path": "/api/users",
+        "http_method": "POST"
+      },
+      {
+        "name": "deleteUser",
+        "class_name": "UserController",
+        "file_path": "./test/java-project/src/main/java/com/example/controller/UserController.java",
+        "start_line": 26,
+        "end_line": 28,
+        "called_functions": [
+          "UserService.deleteUserById"
+        ],
+        "is_public": true,
+        "is_rest_endpoint": true,
+        "endpoint_path": "/api/users/{id}",
+        "http_method": "DELETE"
+      }
+    ],
+    "imports": [
+      "com.example.service.UserService",
+      "com.example.dto.UserResponse",
+      "org.springframework.beans.factory.annotation.Autowired",
+      "org.springframework.web.bind.annotation"
+    ]
+  },
+  "UserRepository": {
+    "name": "",
+    "class_name": "UserRepository",
+    "file_path": "./test/java-project/src/main/java/com/example/repository/UserRepository.java",
+    "start_line": 9,
+    "end_line": 29,
+    "is_public": true,
+    "is_rest_endpoint": false,
+    "endpoint_path": "",
+    "http_method": "",
+    "called_functions": [
+      "userDatabase.remove",
+      "userDatabase.put",
+      "userDatabase.containsKey"
+    ],
+    "package": "com.example.repository",
+    "functions": [
+      {
+        "name": "getUserById",
+        "class_name": "UserRepository",
+        "file_path": "./test/java-project/src/main/java/com/example/repository/UserRepository.java",
+        "start_line": 13,
+        "end_line": 15,
+        "called_functions": [],
+        "is_public": true,
+        "is_rest_endpoint": false,
+        "endpoint_path": "",
+        "http_method": ""
+      },
+      {
+        "name": "saveUser",
+        "class_name": "UserRepository",
+        "file_path": "./test/java-project/src/main/java/com/example/repository/UserRepository.java",
+        "start_line": 17,
+        "end_line": 20,
+        "called_functions": [],
+        "is_public": true,
+        "is_rest_endpoint": false,
+        "endpoint_path": "",
+        "http_method": ""
+      },
+      {
+        "name": "deleteUser",
+        "class_name": "UserRepository",
+        "file_path": "./test/java-project/src/main/java/com/example/repository/UserRepository.java",
+        "start_line": 22,
+        "end_line": 24,
+        "called_functions": [],
+        "is_public": true,
+        "is_rest_endpoint": false,
+        "endpoint_path": "",
+        "http_method": ""
+      },
+      {
+        "name": "existsById",
+        "class_name": "UserRepository",
+        "file_path": "./test/java-project/src/main/java/com/example/repository/UserRepository.java",
+        "start_line": 26,
+        "end_line": 28,
+        "called_functions": [],
+        "is_public": true,
+        "is_rest_endpoint": false,
+        "endpoint_path": "",
+        "http_method": ""
+      }
+    ],
+    "imports": [
+      "com.example.dto.UserResponse",
+      "org.springframework.stereotype.Repository",
+      "java.util.HashMap",
+      "java.util.Map"
+    ]
+  },
+  "UserService": {
+    "name": "",
+    "class_name": "UserService",
+    "file_path": "./test/java-project/src/main/java/com/example/service/UserService.java",
+    "start_line": 10,
+    "end_line": 44,
+    "is_public": true,
+    "is_rest_endpoint": false,
+    "endpoint_path": "",
+    "http_method": "",
+    "called_functions": [
+      "generateUserId",
+      "userRepository.saveUser",
+      "validationUtil.validateId",
+      "validationUtil.validateUsername",
+      "userRepository.deleteUser",
+      "System.currentTimeMillis",
+      "buildUserResponse"
+    ],
+    "package": "com.example.service",
+    "functions": [
+      {
+        "name": "findUserById",
+        "class_name": "UserService",
+        "file_path": "./test/java-project/src/main/java/com/example/service/UserService.java",
+        "start_line": 18,
+        "end_line": 21,
+        "called_functions": [
+          "ValidationUtil.validateId"
+        ],
+        "is_public": true,
+        "is_rest_endpoint": false,
+        "endpoint_path": "",
+        "http_method": ""
+      },
+      {
+        "name": "createNewUser",
+        "class_name": "UserService",
+        "file_path": "./test/java-project/src/main/java/com/example/service/UserService.java",
+        "start_line": 23,
+        "end_line": 27,
+        "called_functions": [
+          "ValidationUtil.validateUsername",
+          "UserRepository.saveUser",
+          "UserService.buildUserResponse"
+        ],
+        "is_public": true,
+        "is_rest_endpoint": false,
+        "endpoint_path": "",
+        "http_method": ""
+      },
+      {
+        "name": "deleteUserById",
+        "class_name": "UserService",
+        "file_path": "./test/java-project/src/main/java/com/example/service/UserService.java",
+        "start_line": 29,
+        "end_line": 32,
+        "called_functions": [
+          "ValidationUtil.validateId",
+          "UserController.deleteUser"
+        ],
+        "is_public": true,
+        "is_rest_endpoint": false,
+        "endpoint_path": "",
+        "http_method": ""
+      },
+      {
+        "name": "buildUserResponse",
+        "class_name": "UserService",
+        "file_path": "./test/java-project/src/main/java/com/example/service/UserService.java",
+        "start_line": 34,
+        "end_line": 39,
+        "called_functions": [
+          "UserService.generateUserId"
+        ],
+        "is_public": false,
+        "is_rest_endpoint": false,
+        "endpoint_path": "",
+        "http_method": ""
+      },
+      {
+        "name": "generateUserId",
+        "class_name": "UserService",
+        "file_path": "./test/java-project/src/main/java/com/example/service/UserService.java",
+        "start_line": 41,
+        "end_line": 43,
+        "called_functions": [],
+        "is_public": false,
+        "is_rest_endpoint": false,
+        "endpoint_path": "",
+        "http_method": ""
+      }
+    ],
+    "imports": [
+      "com.example.dto.UserResponse",
+      "com.example.repository.UserRepository",
+      "com.example.util.ValidationUtil",
+      "org.springframework.beans.factory.annotation.Autowired",
+      "org.springframework.stereotype.Service"
+    ]
+  },
+  "UserResponse": {
+    "name": "",
+    "class_name": "UserResponse",
+    "file_path": "./test/java-project/src/main/java/com/example/dto/UserResponse.java",
+    "start_line": 3,
+    "end_line": 47,
+    "is_public": true,
+    "is_rest_endpoint": false,
+    "endpoint_path": "",
+    "http_method": "",
+    "called_functions": [],
+    "package": "com.example.dto",
+    "functions": [
+      {
+        "name": "getId",
+        "class_name": "UserResponse",
+        "file_path": "./test/java-project/src/main/java/com/example/dto/UserResponse.java",
+        "start_line": 15,
+        "end_line": 17,
+        "called_functions": [],
+        "is_public": true,
+        "is_rest_endpoint": false,
+        "endpoint_path": "",
+        "http_method": ""
+      },
+      {
+        "name": "setId",
+        "class_name": "UserResponse",
+        "file_path": "./test/java-project/src/main/java/com/example/dto/UserResponse.java",
+        "start_line": 19,
+        "end_line": 21,
+        "called_functions": [],
+        "is_public": true,
+        "is_rest_endpoint": false,
+        "endpoint_path": "",
+        "http_method": ""
+      },
+      {
+        "name": "getUsername",
+        "class_name": "UserResponse",
+        "file_path": "./test/java-project/src/main/java/com/example/dto/UserResponse.java",
+        "start_line": 23,
+        "end_line": 25,
+        "called_functions": [],
+        "is_public": true,
+        "is_rest_endpoint": false,
+        "endpoint_path": "",
+        "http_method": ""
+      },
+      {
+        "name": "setUsername",
+        "class_name": "UserResponse",
+        "file_path": "./test/java-project/src/main/java/com/example/dto/UserResponse.java",
+        "start_line": 27,
+        "end_line": 29,
+        "called_functions": [],
+        "is_public": true,
+        "is_rest_endpoint": false,
+        "endpoint_path": "",
+        "http_method": ""
+      },
+      {
+        "name": "getEmail",
+        "class_name": "UserResponse",
+        "file_path": "./test/java-project/src/main/java/com/example/dto/UserResponse.java",
+        "start_line": 31,
+        "end_line": 33,
+        "called_functions": [],
+        "is_public": true,
+        "is_rest_endpoint": false,
+        "endpoint_path": "",
+        "http_method": ""
+      },
+      {
+        "name": "setEmail",
+        "class_name": "UserResponse",
+        "file_path": "./test/java-project/src/main/java/com/example/dto/UserResponse.java",
+        "start_line": 35,
+        "end_line": 37,
+        "called_functions": [],
+        "is_public": true,
+        "is_rest_endpoint": false,
+        "endpoint_path": "",
+        "http_method": ""
+      },
+      {
+        "name": "toString",
+        "class_name": "UserResponse",
+        "file_path": "./test/java-project/src/main/java/com/example/dto/UserResponse.java",
+        "start_line": 40,
+        "end_line": 46,
+        "called_functions": [],
+        "is_public": true,
+        "is_rest_endpoint": false,
+        "endpoint_path": "",
+        "http_method": ""
+      }
+    ],
+    "imports": []
+  },
+  "ValidationUtil": {
+    "name": "",
+    "class_name": "ValidationUtil",
+    "file_path": "./test/java-project/src/main/java/com/example/util/ValidationUtil.java",
+    "start_line": 6,
+    "end_line": 26,
+    "is_public": true,
+    "is_rest_endpoint": false,
+    "endpoint_path": "",
+    "http_method": "",
+    "called_functions": [
+      "isEmpty",
+      "input.matches",
+      "username.trim",
+      "username.length"
+    ],
+    "package": "com.example.util",
+    "functions": [
+      {
+        "name": "validateId",
+        "class_name": "ValidationUtil",
+        "file_path": "./test/java-project/src/main/java/com/example/util/ValidationUtil.java",
+        "start_line": 8,
+        "end_line": 12,
+        "called_functions": [],
+        "is_public": true,
+        "is_rest_endpoint": false,
+        "endpoint_path": "",
+        "http_method": ""
+      },
+      {
+        "name": "validateUsername",
+        "class_name": "ValidationUtil",
+        "file_path": "./test/java-project/src/main/java/com/example/util/ValidationUtil.java",
+        "start_line": 14,
+        "end_line": 21,
+        "called_functions": [],
+        "is_public": true,
+        "is_rest_endpoint": false,
+        "endpoint_path": "",
+        "http_method": ""
+      },
+      {
+        "name": "isValidFormat",
+        "class_name": "ValidationUtil",
+        "file_path": "./test/java-project/src/main/java/com/example/util/ValidationUtil.java",
+        "start_line": 23,
+        "end_line": 25,
+        "called_functions": [],
+        "is_public": false,
+        "is_rest_endpoint": false,
+        "endpoint_path": "",
+        "http_method": ""
+      }
+    ],
+    "imports": [
+      "org.springframework.stereotype.Component"
+    ]
+  }
+}

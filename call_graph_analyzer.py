@@ -245,3 +245,108 @@ class ResultFormatter:
         output_lines.append("")
         
         return "\n".join(output_lines)
+
+class ClassAnalyzer:
+    """分析类之间的关系和依赖"""
+    
+    def __init__(self, classes: Dict[str, 'ClassInfo']):
+        from java_parser import ClassInfo
+        self.classes = classes
+        self.class_dependencies: Dict[str, List[str]] = {}
+        self._build_class_dependencies()
+    
+    def _build_class_dependencies(self) -> None:
+        """构建类之间的依赖关系"""
+        for class_name, class_info in self.classes.items():
+            dependencies = set()
+            
+            # 通过import语句获取依赖
+            for import_stmt in class_info.imports:
+                # 提取类名
+                if '.' in import_stmt:
+                    imported_class = import_stmt.split('.')[-1]
+                    dependencies.add(imported_class)
+            
+            # 通过调用的函数获取依赖
+            for called_func in class_info.called_functions:
+                if '.' in called_func:
+                    called_class = called_func.split('.')[0]
+                    if called_class != class_name and called_class in self.classes:
+                        dependencies.add(called_class)
+            
+            self.class_dependencies[class_name] = list(dependencies)
+    
+    def get_class_info_for_export(self, class_name: str) -> Dict:
+        """获取用于导出的类信息，符合用户要求的格式"""
+        if class_name not in self.classes:
+            return None
+        
+        class_info = self.classes[class_name]
+        
+        return {
+            "name": "",  # 保持为空，因为是class而非函数
+            "class_name": class_info.class_name,
+            "file_path": class_info.file_path,
+            "start_line": class_info.start_line,
+            "end_line": class_info.end_line,
+            "is_public": class_info.is_public,
+            "is_rest_endpoint": class_info.is_rest_endpoint,
+            "endpoint_path": class_info.endpoint_path,
+            "http_method": class_info.http_method,
+            "called_functions": class_info.called_functions
+        }
+    
+    def get_all_classes_for_export(self) -> List[Dict]:
+        """获取所有类的导出格式信息"""
+        result = []
+        for class_name in self.classes.keys():
+            class_data = self.get_class_info_for_export(class_name)
+            if class_data:
+                result.append(class_data)
+        return result
+    
+    def find_rest_controllers(self) -> List[Dict]:
+        """查找所有REST控制器类"""
+        rest_controllers = []
+        for class_name, class_info in self.classes.items():
+            if class_info.is_rest_endpoint:
+                rest_controllers.append(self.get_class_info_for_export(class_name))
+        return rest_controllers
+    
+    def get_class_dependencies(self, class_name: str) -> List[str]:
+        """获取指定类的依赖"""
+        return self.class_dependencies.get(class_name, [])
+    
+    def format_class_summary(self) -> str:
+        """格式化类信息摘要"""
+        output_lines = []
+        output_lines.append("=== 类信息摘要 ===")
+        output_lines.append("")
+        
+        total_classes = len(self.classes)
+        rest_controllers = len([c for c in self.classes.values() if c.is_rest_endpoint])
+        public_classes = len([c for c in self.classes.values() if c.is_public])
+        
+        output_lines.append(f"总类数: {total_classes}")
+        output_lines.append(f"REST控制器: {rest_controllers}")
+        output_lines.append(f"公有类: {public_classes}")
+        output_lines.append("")
+        
+        for i, (class_name, class_info) in enumerate(self.classes.items(), 1):
+            output_lines.append(f"{i}. {class_info.class_name}")
+            output_lines.append(f"   文件: {class_info.file_path}")
+            output_lines.append(f"   行数: {class_info.start_line}-{class_info.end_line}")
+            output_lines.append(f"   公有: {'是' if class_info.is_public else '否'}")
+            
+            if class_info.is_rest_endpoint:
+                output_lines.append(f"   REST端点: {class_info.http_method} {class_info.endpoint_path}")
+            
+            output_lines.append(f"   方法数: {len(class_info.functions)}")
+            
+            dependencies = self.get_class_dependencies(class_name)
+            if dependencies:
+                output_lines.append(f"   依赖: {', '.join(dependencies)}")
+            
+            output_lines.append("")
+        
+        return "\n".join(output_lines)
