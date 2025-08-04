@@ -31,11 +31,31 @@ class FunctionInfo:
 @dataclass
 class ClassInfo:
     """Class information structure"""
-    name: str
+    name: str  # 保持为空字符串，因为是class而非函数
+    class_name: str
     file_path: str
-    package: str
-    functions: List[FunctionInfo]
-    imports: List[str]
+    start_line: int
+    end_line: int
+    is_public: bool = False
+    is_rest_endpoint: bool = False
+    endpoint_path: str = ""
+    http_method: str = ""
+    called_functions: List[str] = None  # 类中所有方法调用的函数列表
+    package: str = ""
+    functions: List[FunctionInfo] = None
+    imports: List[str] = None
+    
+    def __post_init__(self):
+        if self.called_functions is None:
+            self.called_functions = []
+        if self.functions is None:
+            self.functions = []
+        if self.imports is None:
+            self.imports = []
+    
+    def to_dict(self):
+        """Convert to dictionary for JSON serialization"""
+        return asdict(self)
 
 class JavaParser:
     """Java code parser using javalang for extracting function call relationships"""
@@ -129,6 +149,13 @@ class JavaParser:
         # Store package to file mapping
         self.package_to_file_map[full_class_name] = file_path
         
+        # 获取类的起止行数
+        start_line = class_node.position.line if class_node.position else 1
+        end_line = self._find_class_end_line(content, start_line)
+        
+        # 检查类的可见性
+        is_public = any(modifier == 'public' for modifier in class_node.modifiers) if class_node.modifiers else False
+        
         # Extract methods from the class
         functions = []
         
@@ -136,16 +163,35 @@ class JavaParser:
         class_annotations = self._extract_annotations(class_node.annotations) if class_node.annotations else {}
         class_rest_mapping = class_annotations.get('RequestMapping', '') or class_annotations.get('Path', '')
         
+        # 检查类级别的REST端点
+        is_class_rest_endpoint, class_endpoint_path, class_http_method = self._check_class_rest_endpoint(class_annotations)
+        
+        # 收集类中所有方法调用的函数
+        all_called_functions = []
+        
         for method_node in class_node.body:
             if isinstance(method_node, javalang.tree.MethodDeclaration):
                 func_info = self._process_method_declaration(method_node, class_name, file_path, content, class_rest_mapping)
                 if func_info:
                     functions.append(func_info)
+                    # 收集所有方法调用的函数
+                    all_called_functions.extend(func_info.called_functions)
+        
+        # 去重调用的函数列表
+        unique_called_functions = list(set(all_called_functions))
         
         # Create class info
         class_info = ClassInfo(
-            name=class_name,
+            name="",  # 保持为空，因为是class而不是函数
+            class_name=class_name,
             file_path=file_path,
+            start_line=start_line,
+            end_line=end_line,
+            is_public=is_public,
+            is_rest_endpoint=is_class_rest_endpoint,
+            endpoint_path=class_endpoint_path,
+            http_method=class_http_method,
+            called_functions=unique_called_functions,
             package=package,
             functions=functions,
             imports=imports
@@ -311,6 +357,55 @@ class JavaParser:
         
         return start_line + 10  # Fallback
     
+    def _find_class_end_line(self, content: str, start_line: int) -> int:
+        """Find the end line of a class by counting braces"""
+        lines = content.split('\n')
+        if start_line > len(lines):
+            return start_line
+        
+        brace_count = 0
+        found_opening_brace = False
+        
+        for i in range(start_line - 1, len(lines)):
+            line = lines[i]
+            
+            # Count braces
+            for char in line:
+                if char == '{':
+                    brace_count += 1
+                    found_opening_brace = True
+                elif char == '}':
+                    brace_count -= 1
+                    
+            # If we found opening brace and braces are balanced, we found the end
+            if found_opening_brace and brace_count == 0:
+                return i + 1
+        
+        return len(lines)  # Return end of file if not found
+    
+    def _check_class_rest_endpoint(self, class_annotations: Dict[str, str]) -> Tuple[bool, str, str]:
+        """Check if class is a REST endpoint (Controller, RestController, etc.)"""
+        rest_controller_annotations = {
+            'RestController': 'REST',
+            'Controller': 'REST', 
+            'Path': 'REST',  # JAX-RS
+            'RequestMapping': 'REST'
+        }
+        
+        endpoint_path = ""
+        http_method = ""
+        is_rest = False
+        
+        for annotation_name, method_type in rest_controller_annotations.items():
+            if annotation_name in class_annotations:
+                is_rest = True
+                if annotation_name in ['RequestMapping', 'Path']:
+                    endpoint_path = class_annotations[annotation_name]
+                http_method = method_type
+                break
+        
+        return is_rest, endpoint_path, http_method
+    
     def _extract_function_calls_from_method(self, method_node) -> List[str]:
         """Extract function calls from method node using javalang AST"""
         calls = []
@@ -402,3 +497,15 @@ class JavaParser:
             functions_data[func_key] = func_info.to_dict()
         
         return json.dumps(functions_data, indent=2, ensure_ascii=False)
+    
+    def get_classes_as_json(self) -> str:
+        """Return all classes information as JSON string"""
+        classes_data = {}
+        for class_name, class_info in self.classes.items():
+            classes_data[class_name] = class_info.to_dict()
+        
+        return json.dumps(classes_data, indent=2, ensure_ascii=False)
+    
+    def get_classes_as_list(self) -> List[ClassInfo]:
+        """Return all classes information as a list"""
+        return list(self.classes.values())
