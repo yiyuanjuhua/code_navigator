@@ -29,6 +29,24 @@ class FunctionInfo:
         return asdict(self)
 
 @dataclass
+class ClassLinkInfo:
+    """Class link information structure for chain analysis"""
+    name: str  # Empty for class level info
+    class_name: str
+    file_path: str
+    start_line: int
+    end_line: int
+    called_functions: List[str]  # Classes used by this class
+    is_public: bool = False
+    is_rest_endpoint: bool = False
+    endpoint_path: str = ""
+    http_method: str = ""
+    
+    def to_dict(self):
+        """Convert to dictionary for JSON serialization"""
+        return asdict(self)
+
+@dataclass
 class ClassInfo:
     """Class information structure"""
     name: str
@@ -43,6 +61,7 @@ class JavaParser:
     def __init__(self):
         self.classes: Dict[str, ClassInfo] = {}
         self.functions: Dict[str, FunctionInfo] = {}
+        self.class_links: Dict[str, ClassLinkInfo] = {}  # 新增：类链路信息
         self.src_main_path: str = ""
         self.package_to_file_map: Dict[str, str] = {}
         
@@ -72,6 +91,18 @@ class JavaParser:
         self._resolve_function_calls()
         
         return self.functions
+
+    def get_class_links(self) -> Dict[str, ClassLinkInfo]:
+        """Return all class link information"""
+        return self.class_links
+
+    def get_class_links_as_json(self) -> str:
+        """Return all class link information as JSON string"""
+        class_links_data = {}
+        for class_key, class_link_info in self.class_links.items():
+            class_links_data[class_key] = class_link_info.to_dict()
+        
+        return json.dumps(class_links_data, indent=2, ensure_ascii=False)
     
     def _find_java_files(self, directory: str) -> List[str]:
         """Find all Java files in directory recursively, excluding test and resource directories"""
@@ -129,6 +160,13 @@ class JavaParser:
         # Store package to file mapping
         self.package_to_file_map[full_class_name] = file_path
         
+        # Extract class position
+        class_start_line = class_node.position.line if class_node.position else 1
+        class_end_line = self._find_class_end_line(content, class_start_line)
+        
+        # Check if class is public
+        is_public = any(modifier == 'public' for modifier in class_node.modifiers) if class_node.modifiers else False
+        
         # Extract methods from the class
         functions = []
         
@@ -136,11 +174,20 @@ class JavaParser:
         class_annotations = self._extract_annotations(class_node.annotations) if class_node.annotations else {}
         class_rest_mapping = class_annotations.get('RequestMapping', '') or class_annotations.get('Path', '')
         
+        # Check if class is a REST controller
+        is_rest_endpoint = bool(class_rest_mapping) or any(
+            annotation in ['RestController', 'Controller', 'Path'] 
+            for annotation in class_annotations.keys()
+        )
+        
         for method_node in class_node.body:
             if isinstance(method_node, javalang.tree.MethodDeclaration):
                 func_info = self._process_method_declaration(method_node, class_name, file_path, content, class_rest_mapping)
                 if func_info:
                     functions.append(func_info)
+        
+        # Extract class dependencies (other classes used by this class)
+        class_dependencies = self._extract_class_dependencies(class_node, imports)
         
         # Create class info
         class_info = ClassInfo(
@@ -152,6 +199,22 @@ class JavaParser:
         )
         
         self.classes[class_name] = class_info
+        
+        # Create class link info for chain analysis
+        class_link_info = ClassLinkInfo(
+            name="",  # Empty as requested for class level info
+            class_name=class_name,
+            file_path=file_path,
+            start_line=class_start_line,
+            end_line=class_end_line,
+            called_functions=class_dependencies,
+            is_public=is_public,
+            is_rest_endpoint=is_rest_endpoint,
+            endpoint_path=class_rest_mapping,
+            http_method="REQUEST" if is_rest_endpoint else ""
+        )
+        
+        self.class_links[class_name] = class_link_info
         
         # Add functions to global function map with deduplication
         for func in functions:
@@ -311,6 +374,32 @@ class JavaParser:
         
         return start_line + 10  # Fallback
     
+    def _find_class_end_line(self, content: str, start_line: int) -> int:
+        """Find the end line of a class by counting braces"""
+        lines = content.split('\n')
+        if start_line > len(lines):
+            return start_line
+        
+        brace_count = 0
+        found_opening_brace = False
+        
+        for i in range(start_line - 1, len(lines)):
+            line = lines[i]
+            
+            # Count braces
+            for char in line:
+                if char == '{':
+                    brace_count += 1
+                    found_opening_brace = True
+                elif char == '}':
+                    brace_count -= 1
+                    
+            # If we found opening brace and braces are balanced, we found the end
+            if found_opening_brace and brace_count == 0:
+                return i + 1
+        
+        return len(lines)  # End of file if not found
+    
     def _extract_function_calls_from_method(self, method_node) -> List[str]:
         """Extract function calls from method node using javalang AST"""
         calls = []
@@ -394,6 +483,88 @@ class JavaParser:
                 return func_key
                 
         return None
+    
+    def _extract_class_dependencies(self, class_node, imports: List[str]) -> List[str]:
+        """Extract class dependencies from class node"""
+        dependencies = set()
+        
+        # Extract from field declarations (instance variables)
+        for field_node in class_node.body:
+            if isinstance(field_node, javalang.tree.FieldDeclaration):
+                if field_node.type:
+                    class_type = self._extract_type_name(field_node.type)
+                    if class_type and self._is_custom_class(class_type, imports):
+                        dependencies.add(class_type)
+        
+        # Extract from method parameters and return types
+        for method_node in class_node.body:
+            if isinstance(method_node, javalang.tree.MethodDeclaration):
+                # Method return type
+                if method_node.return_type:
+                    return_type = self._extract_type_name(method_node.return_type)
+                    if return_type and self._is_custom_class(return_type, imports):
+                        dependencies.add(return_type)
+                
+                # Method parameters
+                if method_node.parameters:
+                    for param in method_node.parameters:
+                        param_type = self._extract_type_name(param.type)
+                        if param_type and self._is_custom_class(param_type, imports):
+                            dependencies.add(param_type)
+        
+        # Extract from extends and implements
+        if hasattr(class_node, 'extends') and class_node.extends:
+            extends_type = self._extract_type_name(class_node.extends)
+            if extends_type and self._is_custom_class(extends_type, imports):
+                dependencies.add(extends_type)
+        
+        if hasattr(class_node, 'implements') and class_node.implements:
+            for impl in class_node.implements:
+                impl_type = self._extract_type_name(impl)
+                if impl_type and self._is_custom_class(impl_type, imports):
+                    dependencies.add(impl_type)
+        
+        return list(dependencies)
+    
+    def _extract_type_name(self, type_node) -> Optional[str]:
+        """Extract type name from type node"""
+        if hasattr(type_node, 'name'):
+            return type_node.name
+        elif hasattr(type_node, 'element') and hasattr(type_node.element, 'name'):
+            # For array types like String[]
+            return type_node.element.name
+        elif hasattr(type_node, 'arguments') and type_node.arguments:
+            # For generic types like List<String>
+            if hasattr(type_node, 'name'):
+                return type_node.name
+        elif isinstance(type_node, str):
+            return type_node
+        return None
+    
+    def _is_custom_class(self, class_name: str, imports: List[str]) -> bool:
+        """Check if a class name represents a custom (non-built-in) class"""
+        # Skip primitive types and common Java built-in types
+        builtin_types = {
+            'int', 'long', 'double', 'float', 'boolean', 'char', 'byte', 'short',
+            'String', 'Object', 'Integer', 'Long', 'Double', 'Float', 'Boolean',
+            'Character', 'Byte', 'Short', 'List', 'Map', 'Set', 'Collection',
+            'ArrayList', 'HashMap', 'HashSet', 'LinkedList', 'TreeMap', 'TreeSet',
+            'Date', 'Calendar', 'UUID', 'BigDecimal', 'BigInteger'
+        }
+        
+        if class_name in builtin_types:
+            return False
+        
+        # If it's a single word and not in imports, likely a local class
+        if '.' not in class_name:
+            return True
+        
+        # If it's in imports, it's likely custom
+        for import_path in imports:
+            if import_path.endswith(f".{class_name}") or import_path.endswith(f".*"):
+                return True
+        
+        return False
     
     def get_functions_as_json(self) -> str:
         """Return all functions information as JSON string"""
